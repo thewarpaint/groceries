@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Grocery tracker!</title>
+
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=PT+Serif">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:300">
+    <link rel="stylesheet" href="bower_components/bootstrap/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="app.css">
+  </head>
+  <body>
+    <div id="top">
+      <div class="container">
+        <h1>Grocery tracker!</h1>
+
+        <form>
+          <div id="new-item-description">
+            Compré
+            <input id="grocery-name-input" type="text" name="groceryName" placeholder="yogurt">
+            que caduca dentro de
+            <input id="days-from-now-input" type="number" name="daysFromNow" min="1" placeholder="3">
+            días, el
+            <input id="expiration-date-input" type="date" name="expirationDate" value="2015-12-01">.
+            <button type="submit" name="add">Agrega</button> o presiona <kbd>enter</kbd>.
+          </div>
+
+          <!-- <div class="text-right">
+
+          </div> -->
+        </form>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="row">
+        <div class="col-sm-3">
+          <div>
+            <h2>¡Ya tíralo!</h2>
+            4/7
+          </div>
+          <div>
+            <h2>Con cuidado...</h2>
+            1/7
+          </div>
+          <div>
+            <h2>Todo bien</h2>
+            2/7
+          </div>
+        </div>
+
+        <div class="col-sm-9">
+          <div class="row">
+            <div class="col-sm-6">
+              Leche
+            </div>
+            <div class="col-sm-3">
+              Caducó en Oct 15 (hace 43 días)
+            </div>
+            <div class="col-sm-3">
+              ¡Ya tíralo!
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-sm-6">
+              Plátanos
+            </div>
+            <div class="col-sm-3">
+              Caduca en Nov 30 (faltan 2 días)
+            </div>
+            <div class="col-sm-3">
+              Con cuidado...
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-sm-6">
+              Gnocchi
+            </div>
+            <div class="col-sm-3">
+              Caduca en Dic 12 (faltan 14 días)
+            </div>
+            <div class="col-sm-3">
+              Todo bien
+            </div>
+          </div>
+        </div>
+    </div>
+  </body>
+</html>

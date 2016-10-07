@@ -1,0 +1,26 @@
+#top {
+  background-color: #f1c40f; /* sunflower */
+  color: #fff;
+}
+
+#new-item-description {
+  font-family: "Lato", "PT Serif", sans-serif;
+  font-size: 48px;
+}
+
+#new-item-description input {
+  background: none;
+  border: 0;
+  border-bottom: 1px dashed #F5F7FA; /* light-gray */
+  outline: 0;
+  color: #f39c12;
+}
+
+#new-item-description input::-webkit-input-placeholder {
+  color: #f39c12;
+}
+
+#days-from-now-input {
+  width: 72px;
+  text-align: right;
+}
