@@ -4,10 +4,29 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
   <title>¡Víveres!</title>
+  <script src="//www.gstatic.com/firebasejs/3.6.9/firebase.js"></script>
+  <script>
+    // Initialize Firebase
+    var config = {
+      apiKey: "AIzaSyAWlwVDJmSi0TT4f5gfD1bQD62yJDIeEYg",
+      authDomain: "groceries-6911d.firebaseapp.com",
+      databaseURL: "https://groceries-6911d.firebaseio.com",
+      storageBucket: "groceries-6911d.appspot.com",
+      messagingSenderId: "849879024713"
+    };
+
+    firebase.initializeApp(config);
+  </script>
   <script type="text/javascript">
+    var groceriesRef;
+    var products = [];
+
     var groceriesApp = {
       init: function () {
         newProductForm.reset();
+
+        // It's only one user now, but let's assume we own the key `abc123`
+        groceriesRef = firebase.database().ref('groceries/abc123');
       }
     };
 
@@ -43,6 +62,18 @@
     var productList = {
       add: function (product) {
         productRenderer.addProduct(product);
+        products.push(product);
+        groceriesRef.set(productList.convertToFirebaseObject(products));
+      },
+
+      convertToFirebaseObject: function (products) {
+        return products.map(function (product) {
+          return {
+            uuid: product.uuid,
+            label: product.label,
+            expirationDate: dateService.getFormattedDate(product.expirationDate)
+          };
+        });
       }
     };
 
