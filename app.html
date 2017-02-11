@@ -27,6 +27,10 @@
 
         // It's only one user now, but let's assume we own the key `abc123`
         groceriesRef = firebase.database().ref('groceries/abc123');
+
+        groceriesRef.on('value', function (snapshot) {
+          productList.update(snapshot.val());
+        });
       }
     };
 
@@ -66,12 +70,26 @@
         groceriesRef.set(productList.convertToFirebaseObject(products));
       },
 
+      update: function (newProducts) {
+        products = productList.convertFromFirebaseObject(newProducts);
+      },
+
       convertToFirebaseObject: function (products) {
         return products.map(function (product) {
           return {
             uuid: product.uuid,
             label: product.label,
             expirationDate: dateService.getFormattedDate(product.expirationDate)
+          };
+        });
+      },
+
+      convertFromFirebaseObject: function (products) {
+        return products.map(function (product) {
+          return {
+            uuid: product.uuid,
+            label: product.label,
+            expirationDate: dateService.getDateFromString(product.expirationDate)
           };
         });
       }
