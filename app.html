@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>¡Víveres!</title>
+  <script type="text/javascript">
+    var groceriesApp = {
+      init: function () {
+        newProductForm.reset();
+      }
+    };
+
+    var newProductForm = {
+      onSubmit: function (event) {
+        var product = {
+          uuid: uuidService.getNewUuid(),
+          label: document.getElementById('new-product-label-field').value,
+          expirationDate: dateService.getDateFromString(
+            document.getElementById('new-product-expiration-date-field').value)
+        };
+        
+        productList.add(product);
+        newProductForm.reset();
+
+        event.preventDefault();
+      },
+
+      reset: function () {
+        var expirationDateField = document.getElementById('new-product-expiration-date-field');
+
+        // Minimum expiration date is today, no expirations in the past.
+        expirationDateField.min = dateService.getFormattedDate(new Date());
+
+        // Default expiration date is (roughly) three days from now.
+        expirationDateField.value = dateService.getFormattedDate(
+          new Date((new Date()).getTime() + (1000 * 60 * 60 * 24 * 3)));
+
+        document.getElementById('new-product-label-field').value = '';
+      }
+    };
+
+    var productList = {
+      add: function (product) {
+        productRenderer.addProduct(product);
+      }
+    };
+
+    var productRenderer = {
+      addProduct: function (product) {
+        document.getElementById('product-list').innerHTML +=
+          '<li id="' + product.uuid + '">' +
+            productRenderer.getProductViewInnerHTML(product) + '</li>';
+      },
+      getProductViewInnerHTML: function (product) {
+        var dateDelta = Math.ceil(dateService.getDelta(new Date(), product.expirationDate));
+        var formattedDate = dateService.getHumanReadableDate(product.expirationDate);
+
+        return '<h3>' + product.label + '</h3>' +
+          '<p>Caduca en ' + dateDelta + ' día' + (dateDelta === 1 ? '' : 's') +
+            ', el ' + formattedDate + '.</p>';
+      }
+    };
+
+    var dateService = {
+      months: [
+        'Enero',
+        'Febrero',
+        'Marzo',
+        'Abril',
+        'Mayo',
+        'Junio',
+        'Julio',
+        'Agosto',
+        'Septiembre',
+        'Octubre',
+        'Noviembre',
+        'Diciembre'
+      ],
+      getDelta: function (a, b) {
+        return (b.getTime() - a.getTime())/(1000*60*60*24);
+      },
+      getHumanReadableDate: function (date) {
+        return date.getDate() + ' de ' + dateService.months[date.getMonth()];
+      },
+      getFormattedDate: function (date) {
+        var year = date.getFullYear(),
+            month = date.getMonth() + 1,
+            day = date.getDate();
+
+        return year + '-' +
+               (month < 10 ? '0' + month : month) + '-' +
+               (day < 10 ? '0' + day : day);
+      },
+      getDateFromString: function (dateString) {
+        var dateParts = dateString.split('-').map(function (s) {
+          return parseInt(s, 10);
+        });
+
+        return new Date(dateParts[0], dateParts[1] - 1, dateParts [2]);
+      }
+    };
+
+    var uuidService = {
+      getNewUuid: function () {
+        /**
+         * Note: Not really a valid UUID/GUID, just a random placeholder for now.
+         * From http://stackoverflow.com/a/105074
+         */ 
+        function s4() {
+          return Math.floor((1 + Math.random()) * 0x10000)
+            .toString(16)
+            .substring(1);
+        }
+
+
+        return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
+          s4() + '-' + s4() + s4() + s4();
+      }
+    };
+  </script>
+</head>
+<body onload="groceriesApp.init()">
+  <form onsubmit="newProductForm.onSubmit(event)">
+    Compré <input type="text" name="label" id="new-product-label-field" placeholder="nombre del producto"
+      required><br>
+    que caduca el <input type="date" name="expirationDate" id="new-product-expiration-date-field">.<br>
+
+    <button type="submit">Agregar</button>
+  </form>
+
+  <ul id="product-list"></ul>
+</body>
+</html>
