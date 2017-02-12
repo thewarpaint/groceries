@@ -28,8 +28,10 @@
         // It's only one user now, but let's assume we own the key `abc123`
         groceriesRef = firebase.database().ref('groceries/abc123');
 
+        // TODO: Figure out how to send and receive more granular updates, not the whole list at once.
         groceriesRef.on('value', function (snapshot) {
           productList.update(snapshot.val());
+          productListRenderer.render(products);
         });
       }
     };
@@ -65,7 +67,9 @@
 
     var productList = {
       add: function (product) {
-        productRenderer.addProduct(product);
+        // TODO: Figure out how to render just new products (either local ones or from Firebase),
+        // not the whole list all the time.
+        // productRenderer.addProduct(product);
         products.push(product);
         groceriesRef.set(productList.convertToFirebaseObject(products));
       },
@@ -97,10 +101,14 @@
 
     var productRenderer = {
       addProduct: function (product) {
-        document.getElementById('product-list').innerHTML +=
-          '<li id="' + product.uuid + '">' +
+        document.getElementById('product-list').innerHTML += productRenderer.getProductViewHTML(product);
+      },
+
+      getProductViewHTML: function (product) {
+        return '<li id="' + product.uuid + '">' +
             productRenderer.getProductViewInnerHTML(product) + '</li>';
       },
+
       getProductViewInnerHTML: function (product) {
         var dateDelta = Math.ceil(dateService.getDelta(new Date(), product.expirationDate));
         var formattedDate = dateService.getHumanReadableDate(product.expirationDate);
@@ -108,6 +116,14 @@
         return '<h3>' + product.label + '</h3>' +
           '<p>Caduca en ' + dateDelta + ' día' + (dateDelta === 1 ? '' : 's') +
             ', el ' + formattedDate + '.</p>';
+      }
+    };
+
+    var productListRenderer = {
+      render: function (products) {
+        document.getElementById('product-list').innerHTML = products.map(function (product) {
+          return productRenderer.getProductViewHTML(product);
+        }).join('');
       }
     };
 
