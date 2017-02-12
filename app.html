@@ -121,9 +121,14 @@
 
     var productListRenderer = {
       render: function (products) {
-        document.getElementById('product-list').innerHTML = products.map(function (product) {
-          return productRenderer.getProductViewHTML(product);
-        }).join('');
+        document.getElementById('product-list').innerHTML = products
+          .sort(function (a, b) {
+            return a.expirationDate.getTime() - b.expirationDate.getTime();
+          })
+          .map(function (product) {
+            return productRenderer.getProductViewHTML(product);
+          })
+          .join('');
       }
     };
 
