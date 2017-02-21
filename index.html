@@ -36,6 +36,12 @@
       }
     };
 
+    var persistenceLayer = {
+      save: function (products) {
+        groceriesRef.set(productList.convertToFirebaseObject(products));
+      }
+    };
+
     var newProductForm = {
       onSubmit: function (event) {
         var product = {
@@ -71,7 +77,23 @@
         // not the whole list all the time.
         // productRenderer.addProduct(product);
         products.push(product);
-        groceriesRef.set(productList.convertToFirebaseObject(products));
+        persistenceLayer.save(products);
+      },
+
+      remove: function (productUuid) {
+        var index = null;
+
+        for (var i = 0; i < products.length; i++) {
+          if (products[i].uuid === productUuid) {
+            index = i;
+            break;
+          }
+        }
+
+        if (index !== null) {
+          products.splice(index, 1);
+          persistenceLayer.save(products);
+        }
       },
 
       update: function (newProducts) {
@@ -115,7 +137,8 @@
 
         return '<h3>' + product.label + '</h3>' +
           '<p>Caduca en ' + dateDelta + ' día' + (dateDelta === 1 ? '' : 's') +
-            ', el ' + formattedDate + '.</p>';
+            ', el ' + formattedDate + '.</p>' +
+          '<button onclick="productList.remove(\'' + product.uuid + '\')">Borrar</button>';
       }
     };
 
