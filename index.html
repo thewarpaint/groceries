@@ -19,7 +19,6 @@
   </script>
   <script type="text/javascript">
     var groceriesRef;
-    var products = [];
 
     var groceriesApp = {
       init: function () {
@@ -31,14 +30,45 @@
         // TODO: Figure out how to send and receive more granular updates, not the whole list at once.
         groceriesRef.on('value', function (snapshot) {
           productList.update(snapshot.val());
-          productListRenderer.render(products);
+          productListRenderer.render(persistenceLayer.data.products);
         });
       }
     };
 
     var persistenceLayer = {
-      save: function (products) {
-        groceriesRef.set(productList.convertToFirebaseObject(products));
+      data: {
+        version: 1,
+        products: []
+      },
+
+      save: function (data) {
+        groceriesRef.set(persistenceLayer.convertToFirebaseObject(data));
+      },
+
+      convertToFirebaseObject: function (data) {
+        return {
+          version: data.version,
+          products: data.products.map(function (product) {
+            return {
+              uuid: product.uuid,
+              label: product.label,
+              expirationDate: dateService.getFormattedDate(product.expirationDate)
+            };
+          })
+        };
+      },
+
+      convertFromFirebaseObject: function (data) {
+        return {
+          version: data.version,
+          products: data.products.map(function (product) {
+            return {
+              uuid: product.uuid,
+              label: product.label,
+              expirationDate: dateService.getDateFromString(product.expirationDate)
+            };
+          })
+        };
       }
     };
 
@@ -76,48 +106,28 @@
         // TODO: Figure out how to render just new products (either local ones or from Firebase),
         // not the whole list all the time.
         // productRenderer.addProduct(product);
-        products.push(product);
-        persistenceLayer.save(products);
+        persistenceLayer.data.products.push(product);
+        persistenceLayer.save(persistenceLayer.data);
       },
 
       remove: function (productUuid) {
         var index = null;
 
-        for (var i = 0; i < products.length; i++) {
-          if (products[i].uuid === productUuid) {
+        for (var i = 0; i < persistenceLayer.data.products.length; i++) {
+          if (persistenceLayer.data.products[i].uuid === productUuid) {
             index = i;
             break;
           }
         }
 
         if (index !== null) {
-          products.splice(index, 1);
-          persistenceLayer.save(products);
+          persistenceLayer.data.products.splice(index, 1);
+          persistenceLayer.save(persistenceLayer.data);
         }
       },
 
-      update: function (newProducts) {
-        products = productList.convertFromFirebaseObject(newProducts);
-      },
-
-      convertToFirebaseObject: function (products) {
-        return products.map(function (product) {
-          return {
-            uuid: product.uuid,
-            label: product.label,
-            expirationDate: dateService.getFormattedDate(product.expirationDate)
-          };
-        });
-      },
-
-      convertFromFirebaseObject: function (products) {
-        return products.map(function (product) {
-          return {
-            uuid: product.uuid,
-            label: product.label,
-            expirationDate: dateService.getDateFromString(product.expirationDate)
-          };
-        });
+      update: function (data) {
+        persistenceLayer.data = persistenceLayer.convertFromFirebaseObject(data);
       }
     };
 
