@@ -150,11 +150,26 @@
       getProductViewInnerHTML: function (product) {
         var dateDelta = Math.ceil(dateService.getDelta(new Date(), product.expirationDate));
         var formattedDate = dateService.getHumanReadableDate(product.expirationDate);
+        var html;
 
-        return '<h3>' + product.label + '</h3>' +
-          '<p>Caduca en ' + dateDelta + ' día' + (dateDelta === 1 ? '' : 's') +
-            ', el ' + formattedDate + '.</p>' +
-          '<button onclick="productList.remove(\'' + product.uuid + '\')">Borrar</button>';
+        html = '<h3>' + product.label + '</h3>';
+
+        if (dateDelta === 0) {
+          html += '<p>Caduca hoy.</p>';
+        } else {
+          if (dateDelta > 0) {
+            html += '<p>Caduca en ' + dateDelta + ' día' + (dateDelta === 1 ? '' : 's');
+          } else {
+            dateDeltaAbsValue = Math.abs(dateDelta);
+            html += '<p>Caducó hace ' + dateDeltaAbsValue + ' día' + (dateDeltaAbsValue === 1 ? '' : 's');
+          }
+
+          html += ', el ' + formattedDate + '.</p>';
+        }
+
+        html += '<button onclick="productList.remove(\'' + product.uuid + '\')">Borrar</button>';
+
+        return html;
       }
     };
 
