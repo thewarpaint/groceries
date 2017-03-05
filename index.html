@@ -341,14 +341,22 @@
     input, button {
       padding: .5em;
     }
+
+    .new-product-form__line {
+      margin: .5em 0;
+    }
   </style>
 </head>
 <body onload="groceriesApp.init()">
-  <form onsubmit="newProductForm.onSubmit(event)">
-    Compré <input type="text" name="label" id="new-product-label-field" placeholder="nombre del producto"
-      required><br>
-    que caduca el
-      <input type="date" name="expirationDate" id="new-product-expiration-date-field" required>.<br>
+  <form onsubmit="newProductForm.onSubmit(event)" class="new-product-form">
+    <p class="new-product-form__line">
+      Compré
+      <input type="text" name="label" id="new-product-label-field" placeholder="nombre del producto" required>
+    </p>
+    <p class="new-product-form__line">
+      que caduca el
+      <input type="date" name="expirationDate" id="new-product-expiration-date-field" required>.
+    </p>
 
     <button type="submit">Agregar</button>
   </form>
