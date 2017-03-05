@@ -20,6 +20,29 @@
   <script type="text/javascript">
     var groceriesRef;
 
+    // Thresholds should be in descending order.
+    // Last one should have the lowest number available to capture all other cases.
+
+    var EDIBLE = 'edible',
+        ABOUT_TO_EXPIRE = 'aboutToExpire',
+        EXPIRED = 'expired';
+
+    var thresholds = [
+      { key: EDIBLE, delta: 3 },
+      { key: ABOUT_TO_EXPIRE, delta: 0 },
+      { key: EXPIRED, delta: Number.NEGATIVE_INFINITY }
+    ];
+
+    var i18n = {
+      categories: {}
+    };
+
+    i18n.categories[EDIBLE] = 'Todo bien';
+    i18n.categories[ABOUT_TO_EXPIRE] = 'Con cuidado...';
+    i18n.categories[EXPIRED] = '¡Ya tíralo!';
+
+    var MILLISECONDS_IN_DAY = 1000 * 60 * 60 * 24;
+
     var groceriesApp = {
       init: function () {
         newProductForm.reset();
@@ -29,8 +52,8 @@
 
         // TODO: Figure out how to send and receive more granular updates, not the whole list at once.
         groceriesRef.on('value', function (snapshot) {
-          productList.update(snapshot.val());
-          productListRenderer.render(persistenceLayer.data.products);
+          persistenceLayer.update(snapshot.val());
+          categoryList.view.render(persistenceLayer.data);
         });
       }
     };
@@ -43,6 +66,10 @@
 
       save: function (data) {
         groceriesRef.set(persistenceLayer.convertToFirebaseObject(data));
+      },
+
+      update: function (data) {
+        persistenceLayer.data = persistenceLayer.convertFromFirebaseObject(data);
       },
 
       convertToFirebaseObject: function (data) {
@@ -95,13 +122,35 @@
 
         // Default expiration date is (roughly) three days from now.
         expirationDateField.value = dateService.getFormattedDate(
-          new Date((new Date()).getTime() + (1000 * 60 * 60 * 24 * 3)));
+          new Date((new Date()).getTime() + (MILLISECONDS_IN_DAY * 3)));
 
         document.getElementById('new-product-label-field').value = '';
       }
     };
 
     var productList = {
+      view: {
+        getHTML: function (products) {
+          return '<ul>' + productList.view.getInnerHTML(products) + '</ul>';
+        },
+
+        getInnerHTML: function (products) {
+          return products
+            .sort(function (a, b) {
+              return a.expirationDate.getTime() - b.expirationDate.getTime();
+            })
+            .map(function (product) {
+              return productRenderer.getProductViewHTML(product);
+            })
+            .join('');
+        },
+
+        // Deprecated?
+        render: function (products) {
+          document.getElementById('product-list').innerHTML = productList.view.getInnerHTML(products);
+        }
+      },
+
       add: function (product) {
         // TODO: Figure out how to render just new products (either local ones or from Firebase),
         // not the whole list all the time.
@@ -130,10 +179,6 @@
           persistenceLayer.data.products.splice(index, 1);
           persistenceLayer.save(persistenceLayer.data);
         }
-      },
-
-      update: function (data) {
-        persistenceLayer.data = persistenceLayer.convertFromFirebaseObject(data);
       }
     };
 
@@ -173,19 +218,6 @@
       }
     };
 
-    var productListRenderer = {
-      render: function (products) {
-        document.getElementById('product-list').innerHTML = products
-          .sort(function (a, b) {
-            return a.expirationDate.getTime() - b.expirationDate.getTime();
-          })
-          .map(function (product) {
-            return productRenderer.getProductViewHTML(product);
-          })
-          .join('');
-      }
-    };
-
     var dateService = {
       months: [
         'Enero',
@@ -202,7 +234,10 @@
         'Diciembre'
       ],
       getDelta: function (a, b) {
-        return (b.getTime() - a.getTime())/(1000*60*60*24);
+        return (b.getTime() - a.getTime()) / MILLISECONDS_IN_DAY;
+      },
+      getDayDeltaForTimestamps: function (timestampA, timestampB) {
+        return (timestampB - timestampA) / MILLISECONDS_IN_DAY;
       },
       getHumanReadableDate: function (date) {
         return date.getDate() + ' de ' + dateService.months[date.getMonth()];
@@ -222,6 +257,15 @@
         });
 
         return new Date(dateParts[0], dateParts[1] - 1, dateParts [2]);
+      },
+
+      setDateToBeginningOfDay: function (date) {
+        date.setHours(0);
+        date.setMinutes(0);
+        date.setSeconds(0);
+        date.setMilliseconds(0);
+
+        return date;
       }
     };
 
@@ -242,6 +286,56 @@
           s4() + '-' + s4() + s4() + s4();
       }
     };
+
+    var categoryList = {
+      view: {
+        render: function (model) {
+          document.getElementById('categories').innerHTML =
+            categoryList.view.getHTML(categoryList.groupProductsByExpirationDate(model.products));
+        },
+
+        getHTML: function (categories) {
+          return categories.map(function (category) {
+              return '<h2>' + category.label + '</h2>' +
+                productList.view.getHTML(category.products);
+            })
+            .join('');
+        }
+      },
+
+      groupProductsByExpirationDate: function (products) {
+        var productsByCategory = [];
+        var productsByCategoryMap = {};
+
+        thresholds.forEach(function (threshold) {
+          var category = {
+            label: i18n.categories[threshold.key],
+            products: []
+          };
+
+          productsByCategory.push(category);
+
+          // Auxiliary map to categorize products
+          productsByCategoryMap[threshold.key] = category.products;
+        });
+
+        var delta, i;
+        var nowTimestamp = dateService.setDateToBeginningOfDay(new Date()).getTime();
+
+        products.forEach(function (product) {
+          delta = dateService.getDayDeltaForTimestamps(nowTimestamp, product.expirationDate.getTime());
+
+          for (i = 0; i < thresholds.length; i++) {
+            if (delta >= thresholds[i].delta) {
+              productsByCategoryMap[thresholds[i].key].push(product);
+              break;
+            }
+          }
+        });
+
+        return productsByCategory.reverse();
+      }
+    };
   </script>
   <style type="text/css">
     input, button {
@@ -259,6 +353,6 @@
     <button type="submit">Agregar</button>
   </form>
 
-  <ul id="product-list"></ul>
+  <div id="categories"></ul>
 </body>
 </html>
