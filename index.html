@@ -131,7 +131,7 @@
     var productList = {
       view: {
         getHTML: function (products) {
-          return '<ul>' + productList.view.getInnerHTML(products) + '</ul>';
+          return '<ul class="product-list">' + productList.view.getInnerHTML(products) + '</ul>';
         },
 
         getInnerHTML: function (products) {
@@ -188,7 +188,7 @@
       },
 
       getProductViewHTML: function (product) {
-        return '<li id="' + product.uuid + '">' +
+        return '<li id="' + product.uuid + '" class="product">' +
             productRenderer.getProductViewInnerHTML(product) + '</li>';
       },
 
@@ -197,7 +197,7 @@
         var formattedDate = dateService.getHumanReadableDate(product.expirationDate);
         var html;
 
-        html = '<h3>' + product.label + '</h3>';
+        html = '<h3 class="product__header">' + product.label + '</h3>';
 
         if (dateDelta === 0) {
           html += '<p>Caduca hoy.</p>';
@@ -290,14 +290,16 @@
     var categoryList = {
       view: {
         render: function (model) {
-          document.getElementById('categories').innerHTML =
+          document.getElementById('category-list').innerHTML =
             categoryList.view.getHTML(categoryList.groupProductsByExpirationDate(model.products));
         },
 
         getHTML: function (categories) {
           return categories.map(function (category) {
-              return '<h2>' + category.label + '</h2>' +
-                productList.view.getHTML(category.products);
+              return '<div class="category">' +
+                        '<h2 class="category__header">' + category.label + '</h2>' +
+                        productList.view.getHTML(category.products) +
+                      '</div>';
             })
             .join('');
         }
@@ -345,6 +347,23 @@
     .new-product-form__line {
       margin: .5em 0;
     }
+
+    .category {
+      margin-bottom: 3em;
+    }
+
+    .category__header {
+      font-size: 1.25em;
+    }
+
+    .product-list {
+      padding-left: 0;
+      list-style-type: none;
+    }
+
+    .product__header {
+      font-size: 1.125em;
+    }
   </style>
 </head>
 <body onload="groceriesApp.init()">
@@ -361,6 +380,6 @@
     <button type="submit">Agregar</button>
   </form>
 
-  <div id="categories"></ul>
+  <div id="category-list"></ul>
 </body>
 </html>
