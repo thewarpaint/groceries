@@ -34,7 +34,16 @@
     ];
 
     var i18n = {
-      categories: {}
+      categories: {},
+      products: {
+        actions: {
+          add: 'Agregar',
+          cancel: 'Cancelar',
+          delete: 'Borrar',
+          edit: 'Editar',
+          save: 'Guardar'
+        }
+      }
     };
 
     i18n.categories[EDIBLE] = 'Todo bien';
@@ -45,7 +54,7 @@
 
     var groceriesApp = {
       init: function () {
-        newProductForm.reset();
+        ProductForm.init();
 
         // It's only one user now, but let's assume we own the key `abc123`
         groceriesRef = firebase.database().ref('groceries/abc123');
@@ -99,39 +108,90 @@
       }
     };
 
-    var newProductForm = {
-      onSubmit: function (event) {
-        var product = {
-          uuid: uuidService.getNewUuid(),
-          label: document.getElementById('new-product-label-field').value,
-          expirationDate: dateService.getDateFromString(
-            document.getElementById('new-product-expiration-date-field').value)
-        };
-        
-        productList.add(product);
-        newProductForm.reset();
+    var ProductForm = {
+      elements: {
+        add: null,
+        cancel: null,
+        expirationDate: null,
+        form: null,
+        label: null,
+        uuid: null,
+        save: null
+      },
 
+      init: function () {
+        ProductForm.elements.form = document.getElementById('product-form');
+
+        ProductForm.elements.expirationDate = document.getElementById('product-expiration-date-field');
+        ProductForm.elements.label = document.getElementById('product-label-field');
+        ProductForm.elements.uuid = document.getElementById('product-uuid-field');
+
+        ProductForm.elements.add = document.getElementById('product-add-button');
+        ProductForm.elements.cancel = document.getElementById('product-cancel-button');
+        ProductForm.elements.save = document.getElementById('product-save-button');
+
+        ProductForm.elements.add.textContent = i18n.products.actions.add;
+        ProductForm.elements.cancel.textContent = i18n.products.actions.cancel;
+        ProductForm.elements.save.textContent = i18n.products.actions.save;
+
+        ProductForm.reset();
+      },
+
+      onSubmit: function (event) {
+        var product = ProductForm.getData();
+
+        if (product.uuid) {
+          ProductList.update(product);
+          ProductForm.elements.form.classList.remove('product-form--edit');
+          ProductForm.elements.form.classList.add('product-form--add');
+        } else {
+          product.uuid = uuidService.getNewUuid();
+          ProductList.add(product);
+        }
+
+        ProductForm.reset();
         event.preventDefault();
       },
 
+      edit: function (product) {
+        ProductForm.elements.uuid.value = product.uuid;
+        ProductForm.elements.label.value = product.label;
+        ProductForm.elements.expirationDate.value = dateService.getFormattedDate(product.expirationDate);
+        ProductForm.elements.expirationDate.min = '';
+
+        ProductForm.elements.form.classList.remove('product-form--add');
+        ProductForm.elements.form.classList.add('product-form--edit');
+
+        ProductForm.elements.label.focus();
+      },
+
       reset: function () {
-        var expirationDateField = document.getElementById('new-product-expiration-date-field');
+        var now = new Date();
 
         // Minimum expiration date is today, no expirations in the past.
-        expirationDateField.min = dateService.getFormattedDate(new Date());
+        ProductForm.elements.expirationDate.min = dateService.getFormattedDate(now);
 
         // Default expiration date is (roughly) three days from now.
-        expirationDateField.value = dateService.getFormattedDate(
-          new Date((new Date()).getTime() + (MILLISECONDS_IN_DAY * 3)));
+        ProductForm.elements.expirationDate.value = dateService.
+          getFormattedDate(new Date(now.getTime() + (MILLISECONDS_IN_DAY * 3)));
 
-        document.getElementById('new-product-label-field').value = '';
+        ProductForm.elements.label.value = '';
+        ProductForm.elements.uuid.value = '';
+      },
+
+      getData: function () {
+        return {
+          uuid: ProductForm.elements.uuid.value,
+          label: ProductForm.elements.label.value,
+          expirationDate: dateService.getDateFromString(ProductForm.elements.expirationDate.value)
+        }
       }
     };
 
-    var productList = {
+    var ProductList = {
       view: {
         getHTML: function (products) {
-          return '<ul class="product-list">' + productList.view.getInnerHTML(products) + '</ul>';
+          return '<ul class="product-list">' + ProductList.view.getInnerHTML(products) + '</ul>';
         },
 
         getInnerHTML: function (products) {
@@ -147,7 +207,7 @@
 
         // Deprecated?
         render: function (products) {
-          document.getElementById('product-list').innerHTML = productList.view.getInnerHTML(products);
+          document.getElementById('product-list').innerHTML = ProductList.view.getInnerHTML(products);
         }
       },
 
@@ -159,9 +219,28 @@
         persistenceLayer.save(persistenceLayer.data);
       },
 
+      edit: function (productUuid) {
+        var product = ProductList.findByUuid(productUuid);
+
+        if (typeof product !== 'undefined') {
+          ProductForm.edit(product);
+        }
+      },
+
+      update: function (newProduct) {
+        var productIndex = ProductList.findIndexByUuid(newProduct.uuid);
+
+        if (typeof productIndex === -1) {
+          console.error('Unable to update product', newProduct);
+        }
+
+        persistenceLayer.data.products[productIndex] = newProduct;
+        persistenceLayer.save(persistenceLayer.data);
+      },
+
       remove: function (productUuid) {
         if(confirm('¿Estás seguro?')) {
-          productList.doRemove(productUuid);
+          ProductList.doRemove(productUuid);
         }
       },
 
@@ -179,6 +258,18 @@
           persistenceLayer.data.products.splice(index, 1);
           persistenceLayer.save(persistenceLayer.data);
         }
+      },
+
+      findByUuid: function (uuid) {
+        return persistenceLayer.data.products.find(function (product) {
+          return product.uuid === uuid;
+        })
+      },
+
+      findIndexByUuid: function (uuid) {
+        return persistenceLayer.data.products.findIndex(function (product) {
+          return product.uuid === uuid;
+        })
       }
     };
 
@@ -188,7 +279,7 @@
       },
 
       getProductViewHTML: function (product) {
-        return '<li id="' + product.uuid + '" class="product">' +
+        return '<li id="product-' + product.uuid + '" class="product">' +
             productRenderer.getProductViewInnerHTML(product) + '</li>';
       },
 
@@ -212,7 +303,12 @@
           html += ', el ' + formattedDate + '.</p>';
         }
 
-        html += '<button onclick="productList.remove(\'' + product.uuid + '\')">Borrar</button>';
+        html += '<div class="product__actions">' +
+                  '<button class="product__action" onclick="ProductList.edit(\'' + product.uuid + '\')">' +
+                    i18n.products.actions.edit + '</button>' +
+                  '<button class="product__action" onclick="ProductList.remove(\'' + product.uuid + '\')">' +
+                    i18n.products.actions.delete + '</button>' +
+                '</div>';
 
         return html;
       }
@@ -298,7 +394,7 @@
           return categories.map(function (category) {
               return '<div class="category">' +
                         '<h2 class="category__header">' + category.label + '</h2>' +
-                        productList.view.getHTML(category.products) +
+                        ProductList.view.getHTML(category.products) +
                       '</div>';
             })
             .join('');
@@ -344,7 +440,15 @@
       padding: .5em;
     }
 
-    .new-product-form__line {
+    .product-form--add .product-form__action-save, .product-form--add .product-form__action-cancel {
+      display: none;
+    }
+
+    .product-form--edit .product-form__action-add {
+      display: none;
+    }
+
+    .product-form__line {
       margin: .5em 0;
     }
 
@@ -364,20 +468,33 @@
     .product__header {
       font-size: 1.125em;
     }
+
+    .product-form__action:not(:last-child), .product__action:not(:last-child) {
+      margin-right: 1em;
+    }
   </style>
 </head>
 <body onload="groceriesApp.init()">
-  <form onsubmit="newProductForm.onSubmit(event)" class="new-product-form">
-    <p class="new-product-form__line">
+  <form onsubmit="ProductForm.onSubmit(event)" id="product-form" class="product-form product-form--add">
+    <p class="product-form__line">
       Compré
-      <input type="text" name="label" id="new-product-label-field" placeholder="nombre del producto" required>
+      <input type="text" name="label" id="product-label-field" placeholder="nombre del producto" required>
     </p>
-    <p class="new-product-form__line">
+    <p class="product-form__line">
       que caduca el
-      <input type="date" name="expirationDate" id="new-product-expiration-date-field" required>.
+      <input type="date" name="expirationDate" id="product-expiration-date-field" required>.
     </p>
 
-    <button type="submit">Agregar</button>
+    <input type="hidden" id="product-uuid-field" name="productUuid" value="">
+
+    <div class="product-form__actions">
+      <button type="submit" id="product-add-button"
+        class="product-form__action product-form__action-add"></button>
+      <button type="submit" id="product-save-button"
+        class="product-form__action product-form__action-save"></button>
+      <button type="button" id="product-cancel-button" onclick="ProductForm.reset()"
+        class="product-form__action product-form__action-cancel"></button>
+    </div>
   </form>
 
   <div id="category-list"></ul>
