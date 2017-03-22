@@ -42,6 +42,10 @@
           delete: 'Borrar',
           edit: 'Editar',
           save: 'Guardar'
+        },
+        emptyState: {
+          intro: 'No hay productos en esta categoría.',
+          callToAction: '¿Deseas agregar uno?'
         }
       }
     };
@@ -162,7 +166,7 @@
         ProductForm.elements.form.classList.remove('product-form--add');
         ProductForm.elements.form.classList.add('product-form--edit');
 
-        ProductForm.elements.label.focus();
+        ProductForm.focus();
       },
 
       reset: function () {
@@ -185,12 +189,21 @@
           label: ProductForm.elements.label.value,
           expirationDate: dateService.getDateFromString(ProductForm.elements.expirationDate.value)
         }
+      },
+
+      focus: function () {
+        ProductForm.elements.label.focus();
       }
     };
 
     var ProductList = {
       view: {
         getHTML: function (products) {
+          if (products.length === 0) {
+            return i18n.products.emptyState.intro + ' <a href="#" class="link" onclick="ProductForm.focus()">' +
+              i18n.products.emptyState.callToAction + '</a>';
+          }
+
           return '<ul class="product-list">' + ProductList.view.getInnerHTML(products) + '</ul>';
         },
 
