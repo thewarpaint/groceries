@@ -146,8 +146,7 @@
 
         if (product.uuid) {
           ProductList.update(product);
-          ProductForm.elements.form.classList.remove('product-form--edit');
-          ProductForm.elements.form.classList.add('product-form--add');
+          ProductForm.setEditMode(false);
         } else {
           product.uuid = uuidService.getNewUuid();
           ProductList.add(product);
@@ -163,9 +162,7 @@
         ProductForm.elements.expirationDate.value = dateService.getFormattedDate(product.expirationDate);
         ProductForm.elements.expirationDate.min = '';
 
-        ProductForm.elements.form.classList.remove('product-form--add');
-        ProductForm.elements.form.classList.add('product-form--edit');
-
+        ProductForm.setEditMode(true);
         ProductForm.focus();
       },
 
@@ -181,6 +178,8 @@
 
         ProductForm.elements.label.value = '';
         ProductForm.elements.uuid.value = '';
+
+        ProductForm.setEditMode(false);
       },
 
       getData: function () {
@@ -193,6 +192,16 @@
 
       focus: function () {
         ProductForm.elements.label.focus();
+      },
+
+      setEditMode: function (editMode) {
+        if (editMode) {
+          ProductForm.elements.form.classList.add('product-form--edit');
+          ProductForm.elements.form.classList.remove('product-form--add');
+        } else {
+          ProductForm.elements.form.classList.add('product-form--add');
+          ProductForm.elements.form.classList.remove('product-form--edit');
+        }
       }
     };
 
