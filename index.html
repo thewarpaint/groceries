@@ -56,12 +56,49 @@
 
     var MILLISECONDS_IN_DAY = 1000 * 60 * 60 * 24;
 
+    // Save query params when loaded and update as needed.
+    // From http://stackoverflow.com/a/2880929
+    var urlParams;
+
+    (window.onpopstate = function () {
+        var match,
+          pl     = /\+/g,  // Regex for replacing addition symbol with a space
+          search = /([^&=]+)=?([^&]*)/g,
+          decode = function (s) { return decodeURIComponent(s.replace(pl, " ")); },
+          query  = window.location.search.substring(1);
+
+        urlParams = {};
+        while (match = search.exec(query)) {
+          urlParams[decode(match[1])] = decode(match[2]);
+        }
+    })();
+
     var groceriesApp = {
       init: function () {
+        var account = urlParams.account;
+        var model;
+
+        if (account) {
+          // Account is defined in the URL, save in localStorage for the next time.
+          LocalStorageLayer.set('groceriesData', { account: account });
+        } else {
+          // Try to get account from localStorage.
+          model = LocalStorageLayer.get('groceriesData');
+
+          if (model) {
+            account = model.account;
+          }
+
+          if (!account) {
+            console.warn('Couldn\'t get account, falling back to \'demo\'.');
+            account = 'demo';
+          }
+        }
+
         ProductForm.init();
 
         // It's only one user now, but let's assume we own the key `abc123`
-        groceriesRef = firebase.database().ref('groceries/abc123');
+        groceriesRef = firebase.database().ref('groceries/' + account);
 
         // TODO: Figure out how to send and receive more granular updates, not the whole list at once.
         groceriesRef.on('value', function (snapshot) {
@@ -99,16 +136,41 @@
       },
 
       convertFromFirebaseObject: function (data) {
-        return {
+        var model = {
           version: data.version,
-          products: data.products.map(function (product) {
+          products: []
+        };
+
+        if (data.products && data.products.length > 0) {
+          model.products = data.products.map(function (product) {
             return {
               uuid: product.uuid,
               label: product.label,
               expirationDate: dateService.getDateFromString(product.expirationDate)
             };
-          })
-        };
+          });
+        }
+
+        return model;
+      }
+    };
+
+    var LocalStorageLayer = {
+      get: function (key) {
+        try {
+          return JSON.parse(localStorage.getItem(key));
+        } catch (e) {
+          console.error('Couldn\'t get localStorage key:', key, e);
+          return null;
+        }
+      },
+
+      set: function (key, value) {
+        try {
+          localStorage.setItem(key, JSON.stringify(value));
+        } catch (e) {
+          console.error('Couldn\'t set localStorage key:', key, ', value:', value, e);
+        }
       }
     };
 
