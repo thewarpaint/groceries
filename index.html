@@ -195,6 +195,8 @@
         ProductForm.elements.add = document.getElementById('product-add-button');
         ProductForm.elements.cancel = document.getElementById('product-cancel-button');
         ProductForm.elements.save = document.getElementById('product-save-button');
+        ProductForm.elements.datePlus = document.getElementById('product-date-plus-button');
+        ProductForm.elements.dateMinus = document.getElementById('product-date-minus-button');
 
         ProductForm.elements.add.textContent = i18n.products.actions.add;
         ProductForm.elements.cancel.textContent = i18n.products.actions.cancel;
@@ -219,37 +221,61 @@
       },
 
       edit: function (product) {
-        ProductForm.elements.uuid.value = product.uuid;
-        ProductForm.elements.label.value = product.label;
-        ProductForm.elements.expirationDate.value = dateService.getFormattedDate(product.expirationDate);
-        ProductForm.elements.expirationDate.min = '';
+        var data = {
+          editMode: true,
+          expirationDate: product.expirationDate,
+          label: product.label,
+          minExpirationDate: null,
+          uuid: product.uuid
+        };
 
-        ProductForm.setEditMode(true);
+        ProductForm.setData(data);
         ProductForm.focus();
       },
 
       reset: function () {
         var now = new Date();
+        var threeDaysFromNow = new Date();
+        threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
 
         // Minimum expiration date is today, no expirations in the past.
-        ProductForm.elements.expirationDate.min = dateService.getFormattedDate(now);
+        // Default expiration date is three days from now.
+        var data = {
+          editMode: false,
+          expirationDate: threeDaysFromNow,
+          label: '',
+          minExpirationDate: now,
+          uuid: ''
+        };
 
-        // Default expiration date is (roughly) three days from now.
-        ProductForm.elements.expirationDate.value = dateService.
-          getFormattedDate(new Date(now.getTime() + (MILLISECONDS_IN_DAY * 3)));
-
-        ProductForm.elements.label.value = '';
-        ProductForm.elements.uuid.value = '';
-
-        ProductForm.setEditMode(false);
+        ProductForm.setData(data);
       },
 
       getData: function () {
         return {
-          uuid: ProductForm.elements.uuid.value,
+          editMode: ProductForm.elements.form.classList.contains('product-form--edit'),
+          expirationDate: dateService.getDateFromString(ProductForm.elements.expirationDate.value),
           label: ProductForm.elements.label.value,
-          expirationDate: dateService.getDateFromString(ProductForm.elements.expirationDate.value)
+          minExpirationDate: dateService.getDateFromString(ProductForm.elements.expirationDate.min),
+          uuid: ProductForm.elements.uuid.value
         }
+      },
+
+      setData: function (data) {
+        ProductForm.elements.expirationDate.value = dateService.getFormattedDate(data.expirationDate);
+        ProductForm.elements.label.value = data.label;
+        ProductForm.elements.uuid.value = data.uuid;
+
+        if (data.minExpirationDate) {
+          ProductForm.elements.expirationDate.min = dateService.getFormattedDate(data.minExpirationDate);
+          ProductForm.elements.dateMinus.disabled =
+            data.expirationDate.getTime() === data.minExpirationDate.getTime();
+        } else {
+          ProductForm.elements.expirationDate.min = '';
+          ProductForm.elements.dateMinus.disabled = false;
+        }
+
+        ProductForm.setEditMode(data.editMode);
       },
 
       focus: function () {
@@ -264,6 +290,19 @@
           ProductForm.elements.form.classList.add('product-form--add');
           ProductForm.elements.form.classList.remove('product-form--edit');
         }
+      },
+
+      changeDay: function (delta) {
+        var data = ProductForm.getData();
+        var newExpirationDate = new Date(data.expirationDate.getTime());
+
+        newExpirationDate.setDate(data.expirationDate.getDate() + delta);
+
+        if (!data.minExpirationDate || newExpirationDate >= data.minExpirationDate) {
+          data.expirationDate = newExpirationDate;
+        }
+
+        ProductForm.setData(data);
       }
     };
 
@@ -431,7 +470,12 @@
                (month < 10 ? '0' + month : month) + '-' +
                (day < 10 ? '0' + day : day);
       },
+
       getDateFromString: function (dateString) {
+        if (!dateString) {
+          return null;
+        }
+
         var dateParts = dateString.split('-').map(function (s) {
           return parseInt(s, 10);
         });
@@ -520,7 +564,7 @@
     };
   </script>
   <style type="text/css">
-    input, button {
+    input, button, .btn {
       padding: .5em;
     }
 
@@ -566,7 +610,11 @@
     </p>
     <p class="product-form__line">
       que caduca el
-      <input type="date" name="expirationDate" id="product-expiration-date-field" required>.
+      <button type="button" class="btn" id="product-date-minus-button" onclick="ProductForm.changeDay(-1);">-
+        </button>
+      <input type="date" name="expirationDate" id="product-expiration-date-field" required>
+      <button type="button" class="btn" id="product-date-plus-button" onclick="ProductForm.changeDay(+1);">+
+        </button>.
     </p>
 
     <input type="hidden" id="product-uuid-field" name="productUuid" value="">
