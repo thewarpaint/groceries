@@ -600,6 +600,11 @@
     .product-form__action:not(:last-child), .product__action:not(:last-child) {
       margin-right: 1em;
     }
+
+    .product-form__date-btn {
+      padding-left: 1em;
+      padding-right: 1em;
+    }
   </style>
 </head>
 <body onload="groceriesApp.init()">
@@ -610,11 +615,11 @@
     </p>
     <p class="product-form__line">
       que caduca el
-      <button type="button" class="btn" id="product-date-minus-button" onclick="ProductForm.changeDay(-1);">-
-        </button>
+      <button type="button" class="product-form__date-btn btn" id="product-date-minus-button"
+        onclick="ProductForm.changeDay(-1);">-</button>
       <input type="date" name="expirationDate" id="product-expiration-date-field" required>
-      <button type="button" class="btn" id="product-date-plus-button" onclick="ProductForm.changeDay(+1);">+
-        </button>.
+      <button type="button" class="product-form__date-btn btn" id="product-date-plus-button"
+        onclick="ProductForm.changeDay(+1);">+</button>.
     </p>
 
     <input type="hidden" id="product-uuid-field" name="productUuid" value="">
