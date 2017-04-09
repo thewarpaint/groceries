@@ -108,6 +108,7 @@
         groceriesRef.on('value', function (snapshot) {
           persistenceLayer.update(snapshot.val());
           categoryList.view.render(persistenceLayer.data);
+          Datalist.addCurrentProductsToDatalist();
         });
       }
     };
@@ -603,8 +604,6 @@
       },
 
       init: function () {
-        Datalist.addCurrentProductsToDatalist();
-
         var model = LocalStorageLayer.get('groceriesData', {});
 
         if (model.pastProducts) {
@@ -636,6 +635,7 @@
           });
 
           LocalStorageLayer.set('groceriesData', model);
+          Datalist.view.render(model.pastProducts);
         }
       }
     };
