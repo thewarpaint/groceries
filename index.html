@@ -81,7 +81,9 @@
 
         if (account) {
           // Account is defined in the URL, save in localStorage for the next time.
-          LocalStorageLayer.set('groceriesData', { account: account });
+          model = LocalStorageLayer.get('groceriesData', {});
+          model.account = account;
+          LocalStorageLayer.set('groceriesData', model);
         } else {
           // Try to get account from localStorage.
           model = LocalStorageLayer.get('groceriesData');
@@ -157,11 +159,22 @@
     };
 
     var LocalStorageLayer = {
-      get: function (key) {
+      get: function (key, defaultValue) {
         try {
-          return JSON.parse(localStorage.getItem(key));
+          var value = JSON.parse(localStorage.getItem(key));
+
+          if (value === null && typeof defaultValue !== 'undefined') {
+            return defaultValue;
+          }
+
+          return value;
         } catch (e) {
           console.error('Couldn\'t get localStorage key:', key, e);
+
+          if (typeof defaultValue !== 'undefined') {
+            return defaultValue;
+          }
+
           return null;
         }
       },
