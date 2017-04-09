@@ -99,6 +99,7 @@
         }
 
         ProductForm.init();
+        Datalist.init();
 
         // It's only one user now, but let's assume we own the key `abc123`
         groceriesRef = firebase.database().ref('groceries/' + account);
@@ -354,6 +355,7 @@
         // productRenderer.addProduct(product);
         persistenceLayer.data.products.push(product);
         persistenceLayer.save(persistenceLayer.data);
+        Datalist.add(product);
       },
 
       edit: function (productUuid) {
@@ -373,6 +375,7 @@
 
         persistenceLayer.data.products[productIndex] = newProduct;
         persistenceLayer.save(persistenceLayer.data);
+        Datalist.add(newProduct);
       },
 
       remove: function (productUuid) {
@@ -576,6 +579,66 @@
         return productsByCategory.reverse();
       }
     };
+
+    var Datalist = {
+      MAX_PAST_PRODUCTS: 100,
+
+      view: {
+        render: function (products) {
+          document.getElementById('product-autocomplete').innerHTML =
+            Datalist.view.getInnerHTML(products.sort());
+        },
+
+        getHTML: function (products) {
+          return '<datalist id="product-autocomplete">' +
+              Datalist.view.getInnerHTML(products) +
+            '</datalist>';
+        },
+
+        getInnerHTML: function (products) {
+          return products.map(function (productLabel) {
+              return '<option value="' + productLabel + '"></option>';
+            }).join('');
+        },
+      },
+
+      init: function () {
+        Datalist.addCurrentProductsToDatalist();
+
+        var model = LocalStorageLayer.get('groceriesData', {});
+
+        if (model.pastProducts) {
+          Datalist.view.render(model.pastProducts);
+        }
+      },
+
+      add: function (product) {
+        var model = LocalStorageLayer.get('groceriesData', { pastProducts: [] });
+
+        if (model.pastProducts.indexOf(product.label) === -1) {
+          model.pastProducts.unshift(product.label);
+
+          if (model.pastProducts.length > Datalist.MAX_PAST_PRODUCTS) {
+            model.pastProducts.pop();
+          }
+
+          LocalStorageLayer.set('groceriesData', model);
+          Datalist.view.render(model.pastProducts);
+        }
+      },
+
+      addCurrentProductsToDatalist: function () {
+        model = LocalStorageLayer.get('groceriesData', {});
+
+        if (typeof model.pastProducts === 'undefined') {
+          model.pastProducts = persistenceLayer.data.products.map(function (product) {
+            return product.label;
+          });
+
+          LocalStorageLayer.set('groceriesData', model);
+        }
+      }
+    };
   </script>
   <style type="text/css">
     input, button, .btn {
@@ -625,7 +688,8 @@
   <form onsubmit="ProductForm.onSubmit(event)" id="product-form" class="product-form product-form--add">
     <p class="product-form__line">
       Compré
-      <input type="text" name="label" id="product-label-field" placeholder="nombre del producto" required>
+      <input type="text" name="label" id="product-label-field" placeholder="nombre del producto"
+        list="product-autocomplete" required>
     </p>
     <p class="product-form__line">
       que caduca el
@@ -649,5 +713,6 @@
   </form>
 
   <div id="category-list"></div>
+  <datalist id="product-autocomplete"></datalist>
 </body>
 </html>
