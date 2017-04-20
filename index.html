@@ -35,6 +35,7 @@
 
     var i18n = {
       categories: {},
+      loading: 'Cargando...',
       products: {
         actions: {
           add: 'Agregar',
@@ -100,6 +101,7 @@
 
         ProductForm.init();
         Datalist.init();
+        CategoryList.init();
 
         // It's only one user now, but let's assume we own the key `abc123`
         groceriesRef = firebase.database().ref('groceries/' + account);
@@ -107,7 +109,7 @@
         // TODO: Figure out how to send and receive more granular updates, not the whole list at once.
         groceriesRef.on('value', function (snapshot) {
           persistenceLayer.update(snapshot.val());
-          categoryList.view.render(persistenceLayer.data);
+          CategoryList.view.render(persistenceLayer.data);
           Datalist.addCurrentProductsToDatalist();
         });
       }
@@ -529,11 +531,21 @@
       }
     };
 
-    var categoryList = {
+    var CategoryList = {
+      elements: {
+        list: null,
+      },
+
+      init: function () {
+        CategoryList.elements.list = document.getElementById('category-list');
+
+        CategoryList.elements.list.textContent = i18n.loading;        
+      },
+
       view: {
         render: function (model) {
-          document.getElementById('category-list').innerHTML =
-            categoryList.view.getHTML(categoryList.groupProductsByExpirationDate(model.products));
+          CategoryList.elements.list.innerHTML =
+            CategoryList.view.getHTML(CategoryList.groupProductsByExpirationDate(model.products));
         },
 
         getHTML: function (categories) {
@@ -657,6 +669,10 @@
       margin: .5em 0;
     }
 
+    .category-list {
+      margin-top: 1em;
+    }
+
     .category {
       margin-bottom: 3em;
     }
@@ -712,7 +728,7 @@
     </div>
   </form>
 
-  <div id="category-list"></div>
+  <div id="category-list" class="category-list"></div>
   <datalist id="product-autocomplete"></datalist>
 </body>
 </html>
