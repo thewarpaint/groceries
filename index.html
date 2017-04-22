@@ -39,6 +39,9 @@
     var i18n = {
       categories: {},
       loading: 'Cargando...',
+      networkStatus: {
+        offline: 'La conexión a internet se ha perdido.'
+      },
       products: {
         actions: {
           add: 'Agregar',
@@ -105,6 +108,7 @@
         ProductForm.init();
         Datalist.init();
         CategoryList.init();
+        NetworkStatus.init();
 
         // It's only one user now, but let's assume we own the key `abc123`
         groceriesRef = firebase.database().ref('groceries/' + account);
@@ -654,10 +658,37 @@
         }
       }
     };
+
+    var NetworkStatus = {
+      elements: {
+        networkStatus: null
+      },
+
+      init: function () {
+        NetworkStatus.elements.networkStatus = document.getElementById('network-status');
+
+        NetworkStatus.elements.networkStatus.textContent = i18n.networkStatus.offline;
+
+        window.addEventListener('online', NetworkStatus.updateStatus);
+        window.addEventListener('offline', NetworkStatus.updateStatus);
+      },
+
+      updateStatus: function () {
+        NetworkStatus.elements.networkStatus.classList.toggle('network-status--offline', !navigator.onLine);
+      }
+    }
   </script>
   <style type="text/css">
     input, button, .btn {
       padding: .5em;
+    }
+
+    .body {
+      margin: 0;
+    }
+
+    .category-list, .product-form {
+      margin: 0 .5em;
     }
 
     .product-form--add .product-form__action-save, .product-form--add .product-form__action-cancel {
@@ -701,9 +732,21 @@
       padding-left: 1em;
       padding-right: 1em;
     }
+
+    .network-status {
+      display: none;
+      padding: .5em;
+      background-color: #f1c40f; /* sun-flower */
+    }
+
+    .network-status--offline {
+      display: block;
+    }
   </style>
 </head>
-<body onload="groceriesApp.init()">
+<body class="body" onload="groceriesApp.init()">
+  <div id="network-status" class="network-status"></div>
+
   <form onsubmit="ProductForm.onSubmit(event)" id="product-form" class="product-form product-form--add">
     <p class="product-form__line">
       Compré
