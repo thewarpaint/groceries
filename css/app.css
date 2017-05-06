@@ -1,0 +1,63 @@
+input, button, .btn {
+  padding: .5em;
+}
+
+.body {
+  margin: 0;
+}
+
+.category-list, .product-form {
+  margin: 0 .5em;
+}
+
+.product-form--add .product-form__action-save, .product-form--add .product-form__action-cancel {
+  display: none;
+}
+
+.product-form--edit .product-form__action-add {
+  display: none;
+}
+
+.product-form__line {
+  margin: .5em 0;
+}
+
+.category-list {
+  margin-top: 1em;
+}
+
+.category {
+  margin-bottom: 3em;
+}
+
+.category__header {
+  font-size: 1.25em;
+}
+
+.product-list {
+  padding-left: 0;
+  list-style-type: none;
+}
+
+.product__header {
+  font-size: 1.125em;
+}
+
+.product-form__action:not(:last-child), .product__action:not(:last-child) {
+  margin-right: 1em;
+}
+
+.product-form__date-btn {
+  padding-left: 1em;
+  padding-right: 1em;
+}
+
+.network-status {
+  display: none;
+  padding: .5em;
+  background-color: #f1c40f; /* sun-flower */
+}
+
+.network-status--offline {
+  display: block;
+}
