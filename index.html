@@ -7,19 +7,6 @@
   <link rel="manifest" href="manifest.json">
 
   <title>¡Víveres!</title>
-  <script src="//www.gstatic.com/firebasejs/3.7.1/firebase.js"></script>
-  <script>
-    // Initialize Firebase
-    var config = {
-      apiKey: "AIzaSyAWlwVDJmSi0TT4f5gfD1bQD62yJDIeEYg",
-      authDomain: "groceries-6911d.firebaseapp.com",
-      databaseURL: "https://groceries-6911d.firebaseio.com",
-      storageBucket: "groceries-6911d.appspot.com",
-      messagingSenderId: "849879024713"
-    };
-
-    firebase.initializeApp(config);
-  </script>
   <script type="text/javascript">
     var groceriesRef;
 
@@ -81,62 +68,59 @@
       }
     })();
 
-    var groceriesApp = {
+    var GroceriesApp = {
       init: function () {
-        var account = urlParams.account;
-        var model;
-
-        if (account) {
-          // Account is defined in the URL, save in localStorage for the next time.
-          model = LocalStorageLayer.get('groceriesData', {});
-          model.account = account;
-          LocalStorageLayer.set('groceriesData', model);
-        } else {
-          // Try to get account from localStorage.
-          model = LocalStorageLayer.get('groceriesData');
-
-          if (model) {
-            account = model.account;
-          }
-
-          if (!account) {
-            console.warn('Couldn\'t get account, falling back to \'demo\'.');
-            account = 'demo';
-          }
-        }
-
+        FirebaseLayer.init();
+        PersistenceLayer.init();
         ProductForm.init();
         Datalist.init();
         CategoryList.init();
         NetworkStatus.init();
 
-        // It's only one user now, but let's assume we own the key `abc123`
-        groceriesRef = firebase.database().ref('groceries/' + account);
+        LocalStorageLayer.loadAndRenderCache();
 
-        // TODO: Figure out how to send and receive more granular updates, not the whole list at once.
-        groceriesRef.on('value', function (snapshot) {
-          persistenceLayer.update(snapshot.val());
-          CategoryList.view.render(persistenceLayer.data);
-          Datalist.addCurrentProductsToDatalist();
-        });
+        // Load the Firebase script only if we're not in offline mode
+        if (!PersistenceLayer.offlineMode) {
+          FirebaseLayer.loadScript();
+        }
       }
     };
 
-    var persistenceLayer = {
+    var PersistenceLayer = {
+      offlineMode: true,
+
       data: {
         version: 1,
         products: []
       },
 
+      init: function () {
+        PersistenceLayer.offlineMode = !FirebaseLayer.account;
+
+        // Save a copy of the current state when the page is unloaded if we're not in offline mode
+        if (!PersistenceLayer.offlineMode) {
+          window.addEventListener('unload', function (event) {
+            LocalStorageLayer.set('groceries', PersistenceLayer.serialize(PersistenceLayer.data));
+          });
+        }
+      },
+
       save: function (data) {
-        groceriesRef.set(persistenceLayer.convertToFirebaseObject(data));
+        var serializedData = PersistenceLayer.serialize(data);
+
+        if (PersistenceLayer.offlineMode) {
+          LocalStorageLayer.set('groceries', serializedData);
+          CategoryList.view.render(PersistenceLayer.data);
+        } else {
+          groceriesRef.set(serializedData);
+        }
       },
 
       update: function (data) {
-        persistenceLayer.data = persistenceLayer.convertFromFirebaseObject(data);
+        PersistenceLayer.data = PersistenceLayer.unserialize(data);
       },
 
-      convertToFirebaseObject: function (data) {
+      serialize: function (data) {
         return {
           version: data.version,
           products: data.products.map(function (product) {
@@ -149,7 +133,7 @@
         };
       },
 
-      convertFromFirebaseObject: function (data) {
+      unserialize: function (data) {
         var model = {
           version: data.version,
           products: []
@@ -166,6 +150,66 @@
         }
 
         return model;
+      }
+    };
+
+    var FirebaseLayer = {
+      account: null,
+      scriptUrl: '//www.gstatic.com/firebasejs/3.7.1/firebase.js',
+
+      init: function () {
+        var account = urlParams.account;
+
+        if (account) {
+          // Account is defined in the URL, save in localStorage for the next time.
+          FirebaseLayer.setAccount(account);
+
+          model = LocalStorageLayer.get('groceriesData', {});
+          model.account = account;
+          LocalStorageLayer.set('groceriesData', model);
+        } else {
+          // Try to get account from localStorage.
+          model = LocalStorageLayer.get('groceriesData');
+
+          if (model) {
+            FirebaseLayer.setAccount(model.account);
+          }
+        }
+      },
+
+      loadScript: function () {
+        var script = document.createElement('script');
+        script.type = 'text/javascript';
+        script.defer = true;
+        script.addEventListener('load', FirebaseLayer.onLoad);
+        script.src = FirebaseLayer.scriptUrl;
+
+        document.getElementsByTagName('head')[0].appendChild(script);
+      },
+
+      onLoad: function () {
+        var config = {
+          apiKey: 'AIzaSyAWlwVDJmSi0TT4f5gfD1bQD62yJDIeEYg',
+          authDomain: 'groceries-6911d.firebaseapp.com',
+          databaseURL: 'https://groceries-6911d.firebaseio.com',
+          storageBucket: 'groceries-6911d.appspot.com',
+          messagingSenderId: '849879024713'
+        };
+
+        firebase.initializeApp(config);
+
+        groceriesRef = firebase.database().ref('groceries/' + FirebaseLayer.account);
+
+        // TODO: Figure out how to send and receive more granular updates, not the whole list at once.
+        groceriesRef.on('value', function (snapshot) {
+          PersistenceLayer.update(snapshot.val());
+          CategoryList.view.render(PersistenceLayer.data);
+          Datalist.addCurrentProductsToDatalist();
+        });
+      },
+
+      setAccount: function (account) {
+        FirebaseLayer.account = account;
       }
     };
 
@@ -195,6 +239,26 @@
           localStorage.setItem(key, JSON.stringify(value));
         } catch (e) {
           console.error('Couldn\'t set localStorage key:', key, ', value:', value, e);
+        }
+      },
+
+      loadAndRenderCache: function () {
+        // Start by loading (and rendering) the localStorage model
+        var model = LocalStorageLayer.get('groceries');
+
+        if (model) {
+          model = PersistenceLayer.unserialize(model);
+
+          // Disable the product actions if not in offline mode since we're still waiting to load Firebase
+          if (!PersistenceLayer.offlineMode) {
+            model.products = model.products.map(function (product) {
+              product._actionsDisabled = true;
+
+              return product;
+            });
+          }
+
+          CategoryList.view.render(model);
         }
       }
     };
@@ -363,8 +427,8 @@
         // TODO: Figure out how to render just new products (either local ones or from Firebase),
         // not the whole list all the time.
         // productRenderer.addProduct(product);
-        persistenceLayer.data.products.push(product);
-        persistenceLayer.save(persistenceLayer.data);
+        PersistenceLayer.data.products.push(product);
+        PersistenceLayer.save(PersistenceLayer.data);
         Datalist.add(product);
       },
 
@@ -383,8 +447,8 @@
           console.error('Unable to update product', newProduct);
         }
 
-        persistenceLayer.data.products[productIndex] = newProduct;
-        persistenceLayer.save(persistenceLayer.data);
+        PersistenceLayer.data.products[productIndex] = newProduct;
+        PersistenceLayer.save(PersistenceLayer.data);
         Datalist.add(newProduct);
       },
 
@@ -397,27 +461,27 @@
       doRemove: function (productUuid) {
         var index = null;
 
-        for (var i = 0; i < persistenceLayer.data.products.length; i++) {
-          if (persistenceLayer.data.products[i].uuid === productUuid) {
+        for (var i = 0; i < PersistenceLayer.data.products.length; i++) {
+          if (PersistenceLayer.data.products[i].uuid === productUuid) {
             index = i;
             break;
           }
         }
 
         if (index !== null) {
-          persistenceLayer.data.products.splice(index, 1);
-          persistenceLayer.save(persistenceLayer.data);
+          PersistenceLayer.data.products.splice(index, 1);
+          PersistenceLayer.save(PersistenceLayer.data);
         }
       },
 
       findByUuid: function (uuid) {
-        return persistenceLayer.data.products.find(function (product) {
+        return PersistenceLayer.data.products.find(function (product) {
           return product.uuid === uuid;
         })
       },
 
       findIndexByUuid: function (uuid) {
-        return persistenceLayer.data.products.findIndex(function (product) {
+        return PersistenceLayer.data.products.findIndex(function (product) {
           return product.uuid === uuid;
         })
       }
@@ -454,10 +518,16 @@
         }
 
         html += '<div class="product__actions">' +
-                  '<button class="product__action" onclick="ProductList.edit(\'' + product.uuid + '\')">' +
-                    i18n.products.actions.edit + '</button>' +
-                  '<button class="product__action" onclick="ProductList.remove(\'' + product.uuid + '\')">' +
-                    i18n.products.actions.delete + '</button>' +
+                  '<button ' +
+                    'class="product__action" ' +
+                    'onclick="ProductList.edit(\'' + product.uuid + '\')"' +
+                    (product._actionsDisabled ? 'disabled' : '') +
+                    '>' + i18n.products.actions.edit + '</button>' +
+                  '<button ' +
+                    'class="product__action"' +
+                    'onclick="ProductList.remove(\'' + product.uuid + '\')"' +
+                    (product._actionsDisabled ? 'disabled' : '') +
+                    '>' + i18n.products.actions.delete + '</button>' +
                 '</div>';
 
         return html;
@@ -649,7 +719,7 @@
         model = LocalStorageLayer.get('groceriesData', {});
 
         if (typeof model.pastProducts === 'undefined') {
-          model.pastProducts = persistenceLayer.data.products.map(function (product) {
+          model.pastProducts = PersistenceLayer.data.products.map(function (product) {
             return product.label;
           });
 
@@ -677,7 +747,10 @@
         NetworkStatus.elements.networkStatus.classList.toggle('network-status--offline', !navigator.onLine);
       }
     };
+
+    document.addEventListener('DOMContentLoaded', GroceriesApp.init);
   </script>
+
   <style type="text/css">
     input, button, .btn {
       padding: .5em;
@@ -744,7 +817,7 @@
     }
   </style>
 </head>
-<body class="body" onload="groceriesApp.init()">
+<body class="body">
   <div id="network-status" class="network-status"></div>
 
   <form onsubmit="ProductForm.onSubmit(event)" id="product-form" class="product-form product-form--add">
