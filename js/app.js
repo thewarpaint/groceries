@@ -666,7 +666,7 @@ var Datalist = {
   view: {
     render: function (products) {
       document.getElementById('product-autocomplete').innerHTML =
-        Datalist.view.getInnerHTML(products.sort());
+        Datalist.view.getInnerHTML(products.sort(Datalist.labelSorter));
     },
 
     getHTML: function (products) {
@@ -679,7 +679,7 @@ var Datalist = {
       return products.map(function (productLabel) {
           return '<option value="' + productLabel + '"></option>';
         }).join('');
-    },
+    }
   },
 
   init: function () {
@@ -716,6 +716,25 @@ var Datalist = {
       LocalStorageLayer.set('groceriesData', model);
       Datalist.view.render(model.pastProducts);
     }
+  },
+
+  labelSorter: function (labelA, labelB) {
+    var normalizedLabelA = Datalist.normalizeLabel(labelA);
+    var normalizedLabelB = Datalist.normalizeLabel(labelB);
+
+    if (normalizedLabelA > normalizedLabelB) {
+      return 1;
+    }
+
+    if (normalizedLabelA < normalizedLabelB) {
+      return -1;
+    }
+
+    return 0;
+  },
+
+  normalizeLabel: function (label) {
+    return label.replace(/[^a-zA-Z0-9\s]/gi, '').trim();
   }
 };
 
