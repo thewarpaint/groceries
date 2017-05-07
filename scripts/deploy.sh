@@ -10,7 +10,16 @@ fi
 
 echo "Deploying version $RELEASE ($CURRENT_SHA)..."
 
+# Add current git SHA to page
 sed -i -e "s/%GIT_COMMIT%/$CURRENT_SHA/g" index.html
+
+# Add rudimentary cache busting
+git mv css/app.css css/app-$CURRENT_SHA.css
+git mv js/app.js js/app-$CURRENT_SHA.js
+
+sed -i -e "s/css\/app.css/css\/app-$CURRENT_SHA.css/g" index.html
+sed -i -e "s/js\/app.js/js\/app-$CURRENT_SHA.js/g" index.html
+
 git checkout -B gh-pages
 git commit -am "Release $RELEASE"
 git push -f origin gh-pages
