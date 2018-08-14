@@ -1,20 +1,48 @@
-// var metadata = {
-//   version: '%GIT_COMMIT%'
-// };
+var metadata = {
+  version: '%GIT_COMMIT%'
+};
 
-self.addEventListener('install', function (e) {
+const cacheName = `groceries-${ metadata.version }`;
+const filesToCache = [
+  '/',
+  '/index.html',
+  '/?account=hh',
+  '/index.html?account=hh',
+  '/css/app.css',
+  '/js/app.js'
+];
+
+self.addEventListener('install', (e) => {
   e.waitUntil(
-    caches.open('airhorner').then(function (cache) {
-      return cache.addAll([
-        '/',
-        '/index.html',
-        '/css/app.css',
-        '/js/app.js'
-      ]);
+    caches.open(cacheName).then((cache) => {
+      return cache.addAll(filesToCache);
     })
   );
 });
 
-self.addEventListener('fetch', function (event) {
-  console.log(event.request.url);
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(cacheNames.map((key) => {
+        if (key !== cacheName) {
+          console.log('Service Worker: Removing Old Cache', key);
+
+          return caches.delete(key);
+        }
+      }));
+    })
+  );
+
+  return self.clients.claim();
+});
+
+
+self.addEventListener('fetch', (event) => {
+  console.log('URL:', event.request.url);
+
+  event.respondWith(
+    caches.match(event.request).then((response) => {
+      return response || fetch(event.request);
+    }) // Add catch
+  );
 });
